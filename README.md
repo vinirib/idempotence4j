@@ -21,7 +21,8 @@ idempotence4j provides several modules:
 - **idempotence4j-postgres** - `PostgreSQL` integration, defines flyway migrations, contains PostgreSQL implementation for action repository and locking
 - **idempotence4j-mariadb** - `MariaDb` integration, defines flyway migrations, contains MariaDb implementation for action repository and locking
 - **idempotence4j-metrics** - publishes metrics to `io.micrometer` registry
-- **idempotence4j-spring-boot-starter** - auto configuration for `IdempotenceService`, picking the PostgreSQL or MariaDB implementation that matches the application datasource
+- **idempotence4j-spring-boot-starter** - auto configuration for `IdempotenceService`, picking the PostgreSQL or MariaDB implementation that matches the application datasource.
+  With another database, for example H2 in tests, define your own `ActionRepository` and `LockProvider` beans, otherwise the application fails to start
 
 
 ## Usage
