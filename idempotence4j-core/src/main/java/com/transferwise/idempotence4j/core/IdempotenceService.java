@@ -28,7 +28,7 @@ public interface IdempotenceService {
      * fingerprint, {@link ActionPayloadMismatchException} is thrown instead of executing or replaying the action.
      *
      * @param fingerprint digest of the request payload computed by the client, e.g. a SHA-256 hash, up to 255 characters.
-     *                    {@code null} disables the check for this call
+     *                    Longer values are rejected with {@link IllegalArgumentException}, {@code null} disables the check for this call
      */
     default <S, R> R execute(ActionId actionId, String fingerprint, Function<S, R> onRetry, Supplier<R> procedure, Function<R, S> toRecord, Type recordType) {
         throw new UnsupportedOperationException(getClass().getName() + " does not support payload fingerprints");

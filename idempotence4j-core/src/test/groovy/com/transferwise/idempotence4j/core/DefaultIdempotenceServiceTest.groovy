@@ -284,6 +284,17 @@ class DefaultIdempotenceServiceTest extends Specification {
             } as Metrics)
     }
 
+    def "should reject a fingerprint longer than the maximum length before persisting the action"() {
+        given:
+            def procedure = Mock(Supplier)
+        when:
+            service.execute(anActionId(), "a" * (Action.MAX_FINGERPRINT_LENGTH + 1), procedure, new TypeReference<TestResult>() {})
+        then:
+            thrown(IllegalArgumentException)
+            0 * actionRepository.insertOrGet(_)
+            0 * procedure.get()
+    }
+
     def "should skip fingerprint check for an action persisted without a fingerprint"() {
         given:
             def actionId = anActionId()

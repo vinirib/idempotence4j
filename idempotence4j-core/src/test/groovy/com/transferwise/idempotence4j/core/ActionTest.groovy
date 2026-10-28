@@ -26,4 +26,19 @@ class ActionTest extends Specification {
         then:
             action.fingerprint.isEmpty()
     }
+
+    def "should accept a fingerprint up to the maximum length"() {
+        when:
+            def action = new Action(anActionId(), "a" * Action.MAX_FINGERPRINT_LENGTH)
+        then:
+            action.fingerprint.get().length() == Action.MAX_FINGERPRINT_LENGTH
+    }
+
+    def "should reject a fingerprint longer than the maximum length"() {
+        when:
+            new Action(anActionId(), "a" * (Action.MAX_FINGERPRINT_LENGTH + 1))
+        then:
+            def ex = thrown(IllegalArgumentException)
+            ex.message == "Fingerprint must not be longer than 255 characters"
+    }
 }

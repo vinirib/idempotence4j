@@ -62,12 +62,21 @@ A client may reuse an action id for a different request by mistake. By default t
 To detect this, pass a fingerprint of the request payload as the second argument:
 
 ```java
-String fingerprint = HexFormat.of().formatHex(
-    MessageDigest.getInstance("SHA-256").digest(payloadBytes));
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+
+private static String fingerprint(byte[] payload) {
+    try {
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payload));
+    } catch (NoSuchAlgorithmException ex) {
+        throw new IllegalStateException("SHA-256 is not available", ex);
+    }
+}
 
 Transfer transfer = idempotenceService.execute(
     actionId,
-    fingerprint,
+    fingerprint(payloadBytes),
     transferRepository::get,
     () -> transferRepository.save(Transfer.create(command)),
     Transfer::getId,
@@ -75,7 +84,8 @@ Transfer transfer = idempotenceService.execute(
 );
 ```
 
-- The fingerprint is stored with the action when it is first submitted, up to 255 characters.
+- The fingerprint is stored with the action when it is first submitted. It must not be longer than 255 characters,
+  otherwise `IllegalArgumentException` is thrown. A hex encoded SHA-256 digest is 64 characters.
 - If the same action id is submitted again with a different fingerprint, `ActionPayloadMismatchException` is thrown
   instead of executing or replaying the action, whether the first request completed or is still in progress.
   Map it to a non-retryable response, for example HTTP `422 Unprocessable Entity`.

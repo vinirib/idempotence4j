@@ -13,6 +13,8 @@ import java.util.Optional;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode
 public class Action {
+	public static final int MAX_FINGERPRINT_LENGTH = 255;
+
 	private final ActionId actionId;
 	private final Instant createdAt;
 	private final String fingerprint;
@@ -25,9 +27,13 @@ public class Action {
 	}
 
 	/**
-	 * @param fingerprint optional digest of the request payload, used to detect the same action id submitted with a different payload
+	 * @param fingerprint optional digest of the request payload, used to detect the same action id submitted with a different payload,
+	 *                    up to {@value #MAX_FINGERPRINT_LENGTH} characters so it is stored the same way on every database
 	 */
 	public Action(@NonNull ActionId actionId, String fingerprint) {
+		if (fingerprint != null && fingerprint.length() > MAX_FINGERPRINT_LENGTH) {
+			throw new IllegalArgumentException("Fingerprint must not be longer than " + MAX_FINGERPRINT_LENGTH + " characters");
+		}
 		this.actionId = actionId;
 		this.createdAt = ClockKeeper.now();
 		this.fingerprint = fingerprint;
