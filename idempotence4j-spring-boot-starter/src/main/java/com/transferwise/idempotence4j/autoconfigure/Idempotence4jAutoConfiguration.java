@@ -25,6 +25,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitialization;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -119,7 +120,9 @@ public class Idempotence4jAutoConfiguration {
             return new RetentionProperties();
         }
 
+        // the scheduler registers the purge job once on start, so Flyway, Liquibase or SQL init must create its table first
         @Bean(initMethod = "initialize", destroyMethod = "shutdown")
+        @DependsOnDatabaseInitialization
         @ConditionalOnProperty(name="idempotence4j.retention.enabled", havingValue="true", matchIfMissing = false)
         public RetentionService retentionService(DataSource dataSource, ActionRepository actionRepository, RetentionProperties retentionProperties) {
             RetentionPolicy retentionPolicy = new RetentionPolicy(
