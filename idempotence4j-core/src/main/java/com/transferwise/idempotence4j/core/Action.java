@@ -15,13 +15,22 @@ import java.util.Optional;
 public class Action {
 	private final ActionId actionId;
 	private final Instant createdAt;
+	private final String fingerprint;
 	private Instant lastRunAt;
 	private Instant completedAt;
 	private Result result;
 
 	public Action(@NonNull ActionId actionId) {
+		this(actionId, null);
+	}
+
+	/**
+	 * @param fingerprint optional digest of the request payload, used to detect the same action id submitted with a different payload
+	 */
+	public Action(@NonNull ActionId actionId, String fingerprint) {
 		this.actionId = actionId;
 		this.createdAt = ClockKeeper.now();
+		this.fingerprint = fingerprint;
 	}
 
 	public void started() {
@@ -39,6 +48,17 @@ public class Action {
 
 	public boolean hasResult() {
 		return result != null;
+	}
+
+	/**
+	 * Fingerprints are only compared when both sides have one, actions persisted without a fingerprint never mismatch.
+	 */
+	public boolean hasDifferentFingerprint(String fingerprint) {
+		return this.fingerprint != null && fingerprint != null && !this.fingerprint.equals(fingerprint);
+	}
+
+	public Optional<String> getFingerprint() {
+		return Optional.ofNullable(fingerprint);
 	}
 
 	public Optional<Result> getResult() {
