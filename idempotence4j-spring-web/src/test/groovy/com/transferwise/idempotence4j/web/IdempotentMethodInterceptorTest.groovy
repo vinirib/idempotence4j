@@ -8,6 +8,7 @@ import com.transferwise.idempotence4j.core.exception.ConflictingActionException
 import org.springframework.aop.framework.ProxyFactory
 import org.springframework.aop.support.DefaultPointcutAdvisor
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActions
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
@@ -193,6 +194,37 @@ class IdempotentMethodInterceptorTest extends Specification {
         objectMapper.readValue(result.andReturn().response.contentAsString, TestItem)
     }
 
+    def "should apply @Idempotent declared on a controller interface"() {
+        given:
+            def apiController = new TestApiController()
+            def factory = new ProxyFactory(apiController)
+            factory.proxyTargetClass = true
+            factory.addAdvisor(new DefaultPointcutAdvisor(
+                new IdempotentPointcut(),
+                new IdempotentMethodInterceptor({ idempotenceService }, { new PrincipalClientResolver() }, { KEY_HEADER }, { objectMapper })
+            ))
+            def mockMvc = MockMvcBuilders.standaloneSetup(factory.proxy).build()
+        when:
+            def first = postTo(mockMvc, "/api/items", "key-1", "book")
+            def retry = postTo(mockMvc, "/api/items", "key-1", "book")
+            def mismatch = postTo(mockMvc, "/api/items", "key-1", "pen")
+        then:
+            first.status == 200
+            retry.getHeader(IdempotentMethodInterceptor.REPLAYED_HEADER) == "true"
+            retry.contentAsString == first.contentAsString
+            mismatch.status == 422
+            apiController.executions.get() == 1
+    }
+
+    private MockHttpServletResponse postTo(MockMvc mockMvc, String path, String key, String name) {
+        mockMvc.perform(post(path)
+            .header(KEY_HEADER, key)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(new TestItem(name, null))))
+            .andReturn()
+            .response
+    }
+
     private MockMvc mockMvcFor(IdempotenceService service) {
         MockMvcBuilders.standaloneSetup(proxied(service)).build()
     }
@@ -202,7 +234,7 @@ class IdempotentMethodInterceptorTest extends Specification {
         factory.proxyTargetClass = true
         factory.addAdvisor(new DefaultPointcutAdvisor(
             new IdempotentPointcut(),
-            new IdempotentMethodInterceptor({ service }, { new PrincipalClientResolver() }, { KEY_HEADER })
+            new IdempotentMethodInterceptor({ service }, { new PrincipalClientResolver() }, { KEY_HEADER }, { objectMapper })
         ))
         factory.proxy
     }

@@ -176,14 +176,16 @@ public class Idempotence4jAutoConfiguration {
         public static Advisor idempotentMethodAdvisor(
             ObjectProvider<IdempotenceService> idempotenceService,
             ObjectProvider<IdempotentClientResolver> clientResolver,
-            ObjectProvider<IdempotentWebProperties> webProperties
+            ObjectProvider<IdempotentWebProperties> webProperties,
+            ObjectProvider<ObjectMapper> objectMapper
         ) {
             return new DefaultPointcutAdvisor(
                 new IdempotentPointcut(),
                 new IdempotentMethodInterceptor(
                     idempotenceService::getObject,
                     clientResolver::getObject,
-                    () -> webProperties.getObject().getKeyHeader()
+                    () -> webProperties.getObject().getKeyHeader(),
+                    objectMapper::getIfUnique
                 )
             );
         }

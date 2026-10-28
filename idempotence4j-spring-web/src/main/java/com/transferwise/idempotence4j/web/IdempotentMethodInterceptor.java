@@ -1,5 +1,7 @@
 package com.transferwise.idempotence4j.web;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.transferwise.idempotence4j.core.ActionId;
 import com.transferwise.idempotence4j.core.IdempotenceService;
 import com.transferwise.idempotence4j.core.exception.ActionPayloadMismatchException;
@@ -26,6 +28,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -41,22 +44,26 @@ import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
 public class IdempotentMethodInterceptor implements MethodInterceptor {
     public static final String REPLAYED_HEADER = "Idempotent-Replayed";
     private static final int MAX_KEY_LENGTH = 255;
+    private static final ObjectMapper DEFAULT_OBJECT_MAPPER = JsonMapper.builder().findAndAddModules().build();
 
     // resolved on first use, the advisor holding this interceptor is created before regular beans
     private final Supplier<IdempotenceService> idempotenceService;
     private final Supplier<IdempotentClientResolver> clientResolver;
     private final Supplier<String> keyHeader;
+    private final Supplier<ObjectMapper> objectMapper;
 
     private final Map<Method, List<Integer>> requestBodyIndexes = new ConcurrentHashMap<>();
 
     public IdempotentMethodInterceptor(
         Supplier<IdempotenceService> idempotenceService,
         Supplier<IdempotentClientResolver> clientResolver,
-        Supplier<String> keyHeader
+        Supplier<String> keyHeader,
+        Supplier<ObjectMapper> objectMapper
     ) {
         this.idempotenceService = idempotenceService;
         this.clientResolver = clientResolver;
         this.keyHeader = keyHeader;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -86,7 +93,9 @@ public class IdempotentMethodInterceptor implements MethodInterceptor {
         }
 
         ActionId actionId = new ActionId(key, actionType(idempotent, method), clientResolver.get().resolve(request));
-        String fingerprint = RequestFingerprint.of(request, requestBodies(invocation, method));
+        // the application's mapper when there is one, so request bodies are fingerprinted with its modules
+        ObjectMapper mapper = Objects.requireNonNullElse(objectMapper.get(), DEFAULT_OBJECT_MAPPER);
+        String fingerprint = RequestFingerprint.of(request, requestBodies(invocation, method), mapper);
 
         try {
             return execute(invocation, method, actionId, fingerprint, attributes.getResponse());

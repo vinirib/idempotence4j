@@ -119,7 +119,8 @@ public class TransferController {
 - The action id is made of the key, an action type (`SimpleClassName.methodName` by default, or `@Idempotent(type = "...")`)
   and a client. The client is the authenticated principal name, or `anonymous`. Provide your own `IdempotentClientResolver` bean
   to use for example a tenant or API client id, so different clients can never share a key.
-- The request fingerprint covers the HTTP method, path, request parameters and the deserialized `@RequestBody`.
+- The request fingerprint covers the HTTP method, path, request parameters and the deserialized `@RequestBody`,
+  serialized with the application's Jackson `ObjectMapper` bean when there is a single one.
 
 | Situation | Response |
 | --- | --- |
