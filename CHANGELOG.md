@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file, in reverse 
   and throw `ActionPayloadMismatchException` when the same action id is submitted again with a different fingerprint
 - `MISMATCH` metrics outcome
 - `EphemeralIdempotenceService` supports fingerprints
+- `idempotence4j-spring-web` module: `@Idempotent` Spring MVC handler methods keyed by the `Idempotency-Key` header, replaying the persisted response
+  and answering `400`, `409` and `422`. Auto configured by the starter in servlet web applications
 
 ### Changed
 - `IdempotenceService` fingerprint methods are default methods throwing `UnsupportedOperationException`, so existing custom implementations keep compiling

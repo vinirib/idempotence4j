@@ -21,6 +21,7 @@ idempotence4j provides several modules:
 - **idempotence4j-postgres** - `PostgreSQL` integration, defines flyway migrations, contains PostgreSQL implementation for action repository and locking
 - **idempotence4j-mariadb** - `MariaDb` integration, defines flyway migrations, contains MariaDb implementation for action repository and locking
 - **idempotence4j-metrics** - publishes metrics to `io.micrometer` registry
+- **idempotence4j-spring-web** - `@Idempotent` support for Spring MVC handler methods driven by an `Idempotency-Key` request header
 - **idempotence4j-spring-boot-starter** - auto configuration for `IdempotenceService` with automatic discovery of DB implementation module
 
 
@@ -91,6 +92,45 @@ Transfer transfer = idempotenceService.execute(
   Map it to a non-retryable response, for example HTTP `422 Unprocessable Entity`.
 - The check is skipped when either side has no fingerprint, so actions stored before this feature, or calls without a fingerprint, behave as before.
 - Compute the fingerprint only from the fields that define the request, not from values that change between retries such as timestamps.
+
+### Spring MVC
+
+With the starter in a servlet web application, annotate a handler method with `@Idempotent`:
+
+```java
+@RestController
+public class TransferController {
+
+    @Idempotent
+    @PostMapping("/transfers")
+    public ResponseEntity<Transfer> create(@RequestBody CreateTransferRequest request) {
+        Transfer transfer = transferService.create(request);
+        return ResponseEntity.created(URI.create("/transfers/" + transfer.getId())).body(transfer);
+    }
+}
+```
+
+- The key is read from the `Idempotency-Key` header, configurable with `idempotence4j.web.key-header`.
+- The first request executes the method and persists its return value. A `ResponseEntity` is persisted with its status, headers and body.
+  A retry with the same key returns the persisted response without executing the method, with an `Idempotent-Replayed: true` header.
+- The method runs in the same transaction as the action record, so its database writes and the persisted response commit together.
+- Exceptions thrown by the method are not persisted. They reach your exception handlers unchanged, and a retry executes the method again.
+  A non 2xx `ResponseEntity` returned normally is persisted like any other response.
+- The action id is made of the key, an action type (`SimpleClassName.methodName` by default, or `@Idempotent(type = "...")`)
+  and a client. The client is the authenticated principal name, or `anonymous`. Provide your own `IdempotentClientResolver` bean
+  to use for example a tenant or API client id, so different clients can never share a key.
+- The request fingerprint covers the HTTP method, path, request parameters and the deserialized `@RequestBody`.
+
+| Situation | Response |
+| --- | --- |
+| Missing key (unless `@Idempotent(required = false)`), or key longer than 255 characters | `400 Bad Request` |
+| Another request with the same key is in progress | `409 Conflict` |
+| Same key reused for a different request | `422 Unprocessable Entity` |
+
+These are `IdempotentRequestException`, a `ResponseStatusException`, so your exception handlers can customize them.
+Methods returning asynchronous, streaming or reactive types (`DeferredResult`, `CompletableFuture`, `SseEmitter`,
+`StreamingResponseBody`, `Resource`, `Publisher`, ...) are not supported and fail the application startup.
+The annotation is applied through Spring AOP proxies, so it requires Spring Boot's AOP auto configuration (`spring.aop.auto`, enabled by default).
 
 ## Adding idempotence4j to your build
 
