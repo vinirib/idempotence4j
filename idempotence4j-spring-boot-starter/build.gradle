@@ -18,6 +18,10 @@ dependencies {
     integrationTestImplementation project(':idempotence4j-metrics')
     integrationTestImplementation libraries.hikari
     integrationTestImplementation libraries.postgresql
+    integrationTestImplementation libraries.mariadb
+    integrationTestImplementation libraries.flyway
+    integrationTestImplementation libraries.flyway_postgres
+    integrationTestImplementation libraries.flyway_mysql
     integrationTestImplementation libraries.spock_spring
 }
 
