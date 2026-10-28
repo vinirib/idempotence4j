@@ -10,7 +10,6 @@ buildscript {
 		mavenLocal()
 	}
 	dependencies {
-		classpath 'org.unbroken-dome.gradle-plugins:gradle-testsets-plugin:4.1.0'
 		classpath "com.avast.gradle:gradle-docker-compose-plugin:0.17.21"
         classpath "io.spring.gradle:dependency-management-plugin:1.1.7"
         classpath "org.springframework.boot:spring-boot-gradle-plugin:3.5.7"
@@ -24,7 +23,6 @@ allprojects {
 	apply plugin: 'java-library'
 	apply plugin: 'groovy'
 	apply plugin: 'maven-publish'
-	apply plugin: 'org.unbroken-dome.test-sets'
 	apply plugin: 'io.spring.dependency-management'
 	apply from: "${rootDir}/libraries.gradle"
 	apply from: "${rootDir}/publish.gradle"
@@ -48,10 +46,30 @@ allprojects {
 		}
 	}
 
-	testSets {
-		integrationTest {
-			dirName = 'test-integration'
+	testing {
+		suites {
+			configureEach {
+				useSpock(spockVersion)
+			}
+			integrationTest(JvmTestSuite) {
+				sources {
+					java.srcDirs = ['src/test-integration/java']
+					groovy.srcDirs = ['src/test-integration/groovy']
+					resources.srcDirs = ['src/test-integration/resources']
+				}
+				dependencies {
+					implementation project()
+				}
+			}
 		}
+	}
+
+	// integration tests share the unit test dependencies
+	configurations {
+		integrationTestImplementation.extendsFrom testImplementation
+		integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+		integrationTestCompileOnly.extendsFrom testCompileOnly
+		integrationTestAnnotationProcessor.extendsFrom testAnnotationProcessor
 	}
 
 	dependencies {
@@ -69,7 +87,6 @@ allprojects {
 	}
 
 	test {
-		useJUnitPlatform()
 		reports.junitXml.outputLocation = file('build/test-results')
 
 		testLogging {
@@ -80,8 +97,8 @@ allprojects {
 	}
 
 	integrationTest {
-		useJUnitPlatform()
 		reports.junitXml.outputLocation = file('build/test-integration-results')
+		shouldRunAfter test
 
 		testLogging {
 			events "passed", "skipped", "failed", "standardError"

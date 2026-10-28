@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file, in reverse 
 - Lombok 1.18.32 → 1.18.48 (1.18.32 fails to compile on Java 25)
 - gradle-docker-compose-plugin 0.15.0 → 0.17.21 (0.15.0 is not compatible with Gradle 9)
 - Compilation uses `--release 17`, so artifacts stay Java 17 compatible when built on a newer JDK
+- Integration tests use Gradle's built-in JVM Test Suites instead of the unmaintained `gradle-testsets-plugin`
 
 ### Fixed
 - Local integration tests failing on macOS with Homebrew Docker, the `docker` executable is now resolved like `docker-compose`
