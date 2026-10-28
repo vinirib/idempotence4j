@@ -8,31 +8,23 @@ import com.transferwise.idempotence4j.core.IdempotenceService
 import com.transferwise.idempotence4j.core.LockProvider
 import com.transferwise.idempotence4j.mariadb.JdbcMariaDbActionRepository
 import com.transferwise.idempotence4j.mariadb.JdbcMariaDbLockProvider
-import org.flywaydb.core.Flyway
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import spock.lang.Specification
 
-import javax.sql.DataSource
-
 @SpringBootTest(classes = TestApplication, properties = [
     "spring.datasource.url=jdbc:mariadb://localhost:3306/idempotence4j_db",
     "spring.datasource.driver-class-name=org.mariadb.jdbc.Driver",
+    "spring.flyway.locations=classpath:db/idempotence4j/mariadb",
     "idempotence4j.retention.enabled=false"
 ])
 class DatabaseSelectionMariaDbIntegrationTest extends Specification {
-    @Autowired
-    DataSource dataSource
     @Autowired
     ActionRepository actionRepository
     @Autowired
     LockProvider lockProvider
     @Autowired
     IdempotenceService idempotenceService
-
-    def setup() {
-        Flyway.configure().dataSource(dataSource).locations("classpath:db/idempotence4j/mariadb").load().migrate()
-    }
 
     def "should wire the MariaDB implementation for a MariaDB datasource"() {
         expect:
